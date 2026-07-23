@@ -1,3 +1,3 @@
-import db
+import database
 
-db.build('src/builders/build-db.sql')
+database.run('src/builders/build-db.sql')
