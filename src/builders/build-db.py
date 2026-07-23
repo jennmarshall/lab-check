@@ -1,3 +1,3 @@
 import db
 
-db.build()
+db.build('src/builders/build-db.sql')

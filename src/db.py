@@ -24,9 +24,9 @@ def execute(db, statement):
     except sql.OperationalError as e:
         print(f"ERROR: Failed to execute SQL statement: {e}")
 
-def build():
+def build(file):
     db = connect()
-    for statement in open('src/builders/build-db.sql').read().split(';'):
+    for statement in open(file).read().split(';'):
         if statement.strip():
             execute(db, statement)
     disconnect(db)
