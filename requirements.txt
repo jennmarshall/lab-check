@@ -1,0 +1,5 @@
+customtkinter
+db-sqlite3
+pytest
+flake8
+Sphinx
