@@ -26,37 +26,37 @@ def execute(db, statement):
 
 
 # def create_borrower(db, borrower):
-#     create_borrower_statement = f'''INSERT INTO borowers (name, email, phone)
-#         VALUES ('{borrower.name}', '{borrower.email}', '{borrower.phone}');'''
+#     create_borrower_statement = f'''INSERT INTO borower (name, number, email)
+#         VALUES ('{borrower.name}', '{borrower.number}', '{borrower.email}');'''
 #     execute(db, create_borrower_statement)
 
-# def create_item(db, item):
-#     create_item_statement = f'''INSERT INTO items (name, category, date, location, status, contact)
-#         VALUES ('{item.name}', '{item.category}', '{item.date}', '{item.location}', '{item.status}', '{item.contact}');'''
+# def create_equipment(db, equipment):
+#     create_item_statement = f'''INSERT INTO equipment (name, category, dateBorrowed, laboratory, status, borrower)
+#         VALUES ('{equipment.name}', '{equipment.category}', '{equipment.dateBorrowed}', '{equipment.laboratory}', '{equipment.status}', '{equipment.borrower}');'''
 #     execute(db, create_item_statement)
 
 # def read_borrower(db, borrower):
 #     read_borrower_statement = f'''SELECT * FROM borowers WHERE id = {borrower.id};'''
 #     execute(db, read_borrower_statement)
 
-# def read_item(db, item):
-#     read_item_statement = f'''SELECT * FROM items WHERE id = {item.id};'''
+# def read_equipment(db, equipment):
+#     read_item_statement = f'''SELECT * FROM equipment WHERE id = {equipment.id};'''
 #     execute(db, read_item_statement)
 
 # def update_borrower(db, borrower):
-#     update_borrower_statement = f'''UPDATE borowers SET name = '{borrower.name}', email = '{borrower.email}', phone = '{borrower.phone}' WHERE id = {borrower.id};'''
+#     update_borrower_statement = f'''UPDATE borowers SET name = '{borrower.name}', number = '{borrower.number}', email = '{borrower.email}' WHERE id = {borrower.id};'''
 #     execute(db, update_borrower_statement)
 
-# def update_item(db, item):
-#     update_item_statement = f'''UPDATE items SET name = '{item.name}', category = '{item.category}', date = '{item.date}', location = '{item.location}', status = '{item.status}', contact = '{item.contact}' WHERE id = {item.id};'''
+# def update_equipment(db, equipment):
+#     update_item_statement = f'''UPDATE equipment SET name = '{equipment.name}', category = '{equipment.category}', dateBorrowed = '{equipment.dateBorrowed}', laboratory = '{equipment.laboratory}', status = '{equipment.status}', borrower = '{equipment.borrower}' WHERE id = {equipment.id};'''
 #     execute(db, update_item_statement)
 
 # def delete_borrower(db, borrower):
 #     delete_borrower_statement = f'''DELETE FROM borowers WHERE id = {borrower.id};'''
 #     execute(db, delete_borrower_statement)
 
-# def delete_item(db, item):
-#     delete_item_statement = f'''DELETE FROM items WHERE id = {item.id};'''
+# def delete_equipment(db, equipment):
+#     delete_item_statement = f'''DELETE FROM equipment WHERE id = {equipment.id};'''
 #     execute(db, delete_item_statement)
 
 # method to run SQL files
