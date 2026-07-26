@@ -1,8 +1,8 @@
 import sqlite3 as sql
 
-def connect():
+def connect(db):
     try:
-        db = sql.connect('database.db')
+        db = sql.connect(db)
         print(f"INFO: Opened SQLite database with version {sql.sqlite_version} successfully.")
         return db
     except sql.OperationalError as e:
@@ -61,7 +61,7 @@ def execute(db, statement):
 
 # method to run SQL files
 def run(file):
-    db = connect()
+    db = connect('database.db')
     for statement in open(file).read().split(';'):
         if statement.strip():
             execute(db, statement)

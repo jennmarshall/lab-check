@@ -10,9 +10,11 @@
     - Sphinx
 - installation steps
     - instructions to build
-        run Make
+        run build
     - instructions to run
+        run serve
     - instructions to run tests
+        run test
 
 - optionals
     - visuals
