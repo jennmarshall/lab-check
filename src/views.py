@@ -1,16 +1,8 @@
 import customtkinter as ctk
 
-
-def fetch_items_from_database():
-    """Simulates a database call. Swap this out for a real query later."""
-    return [
-        {"id": 1, "name": "Wireless Mouse", "category": "Electronics", "dateBorrowed": "2026-06-02", "laboratory": "Lab 1", "status": "Borrowed", "borrower": "J. Smith"},
-        {"id": 2, "name": "Mechanical Keyboard", "category": "Electronics", "dateBorrowed": "2026-05-14", "laboratory": "Lab 2", "status": "Overdue", "borrower": "A. Patel"},
-        {"id": 3, "name": "Notebook", "category": "Stationery", "dateBorrowed": "2026-07-01", "laboratory": "Lab 1", "status": "Returned", "borrower": "M. Chen"},
-        {"id": 4, "name": "Desk Lamp", "category": "Home", "dateBorrowed": "2026-06-20", "laboratory": "Lab 3", "status": "Borrowed", "borrower": "R. Okafor"},
-        {"id": 5, "name": "Water Bottle", "category": "Lifestyle", "dateBorrowed": "2026-04-30", "laboratory": "Lab 2", "status": "Returned", "borrower": "S. Kim"},
-        {"id": 6, "name": "Monitor Stand", "category": "Electronics", "dateBorrowed": "2026-07-15", "laboratory": "Lab 3", "status": "Overdue", "borrower": "L. Novak"},
-    ]
+import database as db
+from models.borrower import Borrower
+from models.equipment import Equipment
 
 class LabCheckView(ctk.CTk):
     def __init__(self, connection, *args, **kwargs):
@@ -28,7 +20,7 @@ class LabCheckView(ctk.CTk):
 
         # Loop through the different pages of the application and create a
         # frame for each page, and subsequently add the frames list.
-        for view in (MainView, ListAllView, ListBorrowedView, ListFilteredView, AddItemView, AddBorrowerView, EditItemView, EditBorrowerView):
+        for view in (MainView, ListAllView, ListBorrowedView, ListFilteredView, AbstractAddView, AbstractEditView):
             frame = view(connection, container, self)
             self.frames[view] = frame
             frame.grid(row=0, column=0, sticky="nsew")
@@ -42,6 +34,32 @@ class LabCheckView(ctk.CTk):
         frame = self.frames[f]
         frame.tkraise()
 
+    def fetch_equipment_from_database(self):
+        items = []
+
+        rows = db.read(
+            db=self.connection,
+            select="id, name, category, dateBorrowed, laboratory, status, borrower",
+            table="equipment",
+            where="1=1",
+        )
+
+        for row in rows:
+            item_id, name, category, date_borrowed, laboratory, status, borrower = row
+
+            item = {
+                "id": item_id,
+                "name": name,
+                "category": category,
+                "dateBorrowed": date_borrowed,
+                "laboratory": laboratory,
+                "status": status,
+                "borrower": borrower,
+            }
+
+            items.append(item)
+
+        return items
 
 
 # The definition for the start page of the application, which is the first page
@@ -176,7 +194,7 @@ class AbstractListView(ctk.CTkFrame):
             height=40,
             corner_radius=5,
             font=ctk.CTkFont(size=16),
-            command=lambda: self.controller.show_frame(AddItemView),
+            command=lambda: self.controller.show_frame(AbstractAddView),
         )
         add_btn.grid(row=0, column=4, padx=(0, 10))
 
@@ -190,7 +208,7 @@ class AbstractListView(ctk.CTkFrame):
     # -- Data handling -------------------------------------------------------
 
     def refresh(self):
-        self.items = fetch_items_from_database()
+        self.items = self.controller.fetch_equipment_from_database()
         self._render_items()
 
     def _render_items(self):
@@ -198,7 +216,7 @@ class AbstractListView(ctk.CTkFrame):
         for widget in self.scroll_frame.winfo_children():
             widget.destroy()
 
-        if not self.items:
+        if self.items == []:
             empty_label = ctk.CTkLabel(
                 self.scroll_frame,
                 text="No items found.",
@@ -280,7 +298,7 @@ class AbstractListView(ctk.CTkFrame):
             height=40,
             corner_radius=5,
             font=ctk.CTkFont(size=16),
-            command=lambda item=item: self.controller.show_frame(EditItemView, item=item),
+            command=lambda item=item: self.controller.show_frame(AbstractEditView, item=item),
         )
         edit_btn.grid(row=0, column=4, rowspan=2, padx=(0, 20))
 
@@ -288,33 +306,338 @@ class ListAllView(AbstractListView):
     pass
 
 class ListBorrowedView(AbstractListView):
+# add filter using db query, select = *, from = equipment, where = status is "Borrowed"
     pass
 
 class ListFilteredView(AbstractListView):
+# add filter using db query, select = *, from = equipment, where = user input
     pass
 
 class AbstractAddEditView(ctk.CTkFrame):
+    STATUS_OPTIONS = ["Borrowed", "Returned", "Overdue"]
+    
     def __init__(self, connection, parent, controller):
         ctk.CTkFrame.__init__(self, parent)
         self.connection = connection
         self.controller = controller
+        self.item = controller.selected_item
+        self.mode = None
+
+        self.grid_rowconfigure(1, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+
+        self._build_header()
+        self._build_form_area()
+        self._populate_fields()
+
+    # -- UI construction ---------------------------------------------------
+
+    def _build_header(self):
+        header = ctk.CTkFrame(self, fg_color="transparent")
+        header.grid(row=0, column=0, sticky="ew", padx=30, pady=(30, 15))
+        header.grid_columnconfigure(1, weight=1)
+
+        home_btn = ctk.CTkButton(
+            header,
+            text="Home",
+            width=40,
+            height=40,
+            corner_radius=5,
+            font=ctk.CTkFont(size=16),
+            border_width=1,
+            command=lambda: self.controller.show_frame(MainView),
+        )
+        home_btn.grid(row=0, column=0, padx=(0, 15))
+
+        title_text = "Edit Borrowed Item" if self.mode == "edit" else "Add Borrowed Item" if self.mode == "add" else "Borrowed Item"
+        title = ctk.CTkLabel(
+            header,
+            text=title_text,
+            font=ctk.CTkFont(size=25, weight="bold"),
+        )
+        title.grid(row=0, column=1, sticky="w")
+
+    def _build_form_area(self):
+        self.form_frame = ctk.CTkScrollableFrame(self, label_text="")
+        self.form_frame.grid(row=1, column=0, sticky="nsew", padx=30, pady=(0, 15))
+        self.form_frame.grid_columnconfigure(0, weight=1)
+
+        self.field_widgets = {}
+        row = 0
+
+        row = self._render_text_field(row, "name", "Item Name", "e.g. Microscope")
+        row = self._render_text_field(row, "category", "Category", "e.g. Optics")
+        row = self._render_text_field(row, "laboratory", "Laboratory", "e.g. Lab 3")
+        row = self._render_text_field(row, "dateBorrowed", "Date Borrowed", "YYYY-MM-DD")
+        row = self._render_status_field(row)
+        row = self._render_borrower_field(row)
+
+        self._build_footer()
+
+    def _render_text_field(self, row_index, name, label_text, placeholder):
+        label = ctk.CTkLabel(
+            self.form_frame,
+            text=label_text,
+            font=ctk.CTkFont(size=13, weight="bold"),
+            anchor="w",
+        )
+        label.grid(row=row_index, column=0, sticky="w", padx=10, pady=(15, 4))
+
+        entry = ctk.CTkEntry(
+            self.form_frame,
+            placeholder_text=placeholder,
+            height=40,
+            corner_radius=5,
+        )
+        entry.grid(row=row_index + 1, column=0, sticky="ew", padx=10, pady=(0, 5))
+
+        self.field_widgets[name] = entry
+        return row_index + 2
+
+    def _render_status_field(self, row_index):
+        label = ctk.CTkLabel(
+            self.form_frame,
+            text="Status",
+            font=ctk.CTkFont(size=13, weight="bold"),
+            anchor="w",
+        )
+        label.grid(row=row_index, column=0, sticky="w", padx=10, pady=(15, 4))
+
+        self.status_var = ctk.StringVar(value=self.STATUS_OPTIONS[0])
+
+        status_dropdown = ctk.CTkOptionMenu(
+            self.form_frame,
+            values=self.STATUS_OPTIONS,
+            variable=self.status_var,
+            height=40,
+            corner_radius=5,
+        )
+        status_dropdown.grid(row=row_index + 1, column=0, sticky="ew", padx=10, pady=(0, 5))
+        return row_index + 2
+
+    def _render_borrower_field(self, row_index):
+        label = ctk.CTkLabel(
+            self.form_frame,
+            text="Borrower",
+            font=ctk.CTkFont(size=14, weight="bold"),
+            anchor="w",
+        )
+        label.grid(row=row_index, column=0, sticky="w", padx=10, pady=(15, 4))
+
+        borrower_row = ctk.CTkFrame(self.form_frame, fg_color="transparent")
+        borrower_row.grid(row=row_index + 1, column=0, sticky="ew", padx=10, pady=(0, 5))
+        borrower_row.grid_columnconfigure(0, weight=1)
+
+        self.borrower_var = ctk.StringVar()
+        self.borrower_combo = ctk.CTkComboBox(
+            borrower_row,
+            values=self.get_borrowers(),
+            variable=self.borrower_var,
+            height=40,
+            corner_radius=5,
+        )
+        self.borrower_combo.grid(row=0, column=0, sticky="ew", padx=(0, 10))
+
+        add_borrower_btn = ctk.CTkButton(
+            borrower_row,
+            text="Add",
+            width=40,
+            height=40,
+            corner_radius=5,
+            font=ctk.CTkFont(size=14),
+            command=self._open_new_borrower_popup,
+        )
+        add_borrower_btn.grid(row=0, column=1)
+
+        return row_index + 2
+
+    def _build_footer(self):
+        footer = ctk.CTkFrame(self, fg_color="transparent")
+        footer.grid(row=2, column=0, sticky="ew", padx=30, pady=(0, 30))
+        footer.grid_columnconfigure(0, weight=1)
+
+        save_btn = ctk.CTkButton(
+            footer,
+            text="Save",
+            width=120,
+            height=44,
+            corner_radius=5,
+            font=ctk.CTkFont(size=14, weight="bold"),
+            command=self._on_save_clicked,
+        )
+        save_btn.grid(row=0, column=1, padx=(10, 0))
+
+        cancel_btn = ctk.CTkButton(
+            footer,
+            text="Cancel",
+            width=100,
+            height=44,
+            corner_radius=5,
+            font=ctk.CTkFont(size=14),
+            command=self.on_cancel,
+        )
+        cancel_btn.grid(row=0, column=2, padx=(10, 0))
+
+    # -- New borrower popup ---------------------------------------------------
+
+    def _open_new_borrower_popup(self):
+        popup = ctk.CTkToplevel(self)
+        popup.title("New Borrower")
+        popup.geometry("600x3180")
+        popup.grab_set()
+
+        popup.grid_columnconfigure(3, weight=1)
+
+        label = ctk.CTkLabel(
+            popup,
+            text="Borrower Name",
+            font=ctk.CTkFont(size=13, weight="bold"),
+            anchor="w",
+        )
+        label.grid(row=0, column=0, sticky="w", padx=20, pady=(20, 4))
+
+        name_entry = ctk.CTkEntry(
+            popup,
+            placeholder_text="e.g. J. Smith",
+            height=40,
+            corner_radius=5,
+        )
+        name_entry.grid(row=1, column=0, sticky="ew", padx=20)
+
+        number_entry = ctk.CTkEntry(
+            popup,
+            placeholder_text="e.g. 123-456-7890",
+            height=40,
+            corner_radius=5,
+        )
+        number_entry.grid(row=1, column=1, sticky="ew", padx=20)
+
+        email_entry = ctk.CTkEntry(
+            popup,
+            placeholder_text="e.g. jonsmith123@gmail.com",
+            height=40,
+            corner_radius=5,
+        )
+        email_entry.grid(row=1, column=2, sticky="ew")
+
+        error_label = ctk.CTkLabel(popup, text="", text_color=("red", "#E57373"))
+        error_label.grid(row=2, column=0, padx=20, pady=(4, 0))
+
+        button_row = ctk.CTkFrame(popup, fg_color="transparent")
+        button_row.grid(row=3, columnspan=3, pady=20)
+
+        def on_confirm():
+            new_name = name_entry.get().strip()
+            new_number = number_entry.get().strip()
+            new_email = email_entry.get().strip()
+            if not new_name or not new_number or not new_email:
+                error_label.configure(text="Fields cannot be empty.")
+                return
+
+            borrower = Borrower(new_name, new_number, new_email)
+
+            id = self.create_borrower(borrower)
+
+            # Refresh combobox values and select the new borrower
+            updated_borrowers = self.get_borrowers()
+            self.borrower_combo.configure(values=updated_borrowers)
+            self.borrower_var.set(id)
+
+            popup.destroy()
+
+        confirm_btn = ctk.CTkButton(
+            button_row,
+            text="Create",
+            width=100,
+            height=36,
+            corner_radius=5,
+            command=on_confirm,
+        )
+        confirm_btn.grid(row=0, column=0, padx=(0, 10))
+
+        cancel_btn = ctk.CTkButton(
+            button_row,
+            text="Cancel",
+            width=100,
+            height=36,
+            corner_radius=5,
+            border_width=1,
+            command=popup.destroy,
+        )
+        cancel_btn.grid(row=0, column=1)
+
+    # -- Data handling -------------------------------------------------------
+
+    # self populates fields if editing
+    def _populate_fields(self):
+        if self.mode != "edit" or not self.item:
+            return
+
+        for name, widget in self.field_widgets.items():
+            widget.insert(0, str(self.item.get(name, "")))
+
+        self.status_var.set(self.item.get("status", self.STATUS_OPTIONS[0]))
+        self.borrower_var.set(self.item.get("borrower", ""))
+
+    def _collect_field_values(self):
+        values = {name: widget.get() for name, widget in self.field_widgets.items()}
+        values["status"] = self.status_var.get()
+        values["borrower"] = self.borrower_var.get()
+        return values
+
+    def _on_save_clicked(self):
+        values = self._collect_field_values()        
+        equipment = Equipment(values["name"], values["category"], values["dateBorrowed"], values["laboratory"], values["status"], values["borrower"])
+
+        self.on_save_success(equipment)
+
+
+    def get_borrowers(self):
+        borrowers = []
+        values = db.read(self.connection, "*", "borrower", "1=1")
+        for row in values:
+                    borrower_id, name, number, email = row
+        
+                    borrower = {
+                        "id": borrower_id,
+                        "name": name,
+                        "number": number,
+                        "email": email,
+                    }
+        
+                    borrowers.append(borrower)
+        
+        return borrower
+
+    def create_borrower(self, borrower):
+        id = db.create_borrower(self.connection, borrower)
+        return id
+
+    def create_equipment(self, equipment):
+        id = db.create_equipment(self.connection, equipment)
+        return id
+
+    def update_equipment(self, id, equipment):
+        db.update_equipment(self.connection, id, equipment)
+
+    def on_save_success(self, equipment):
+        if self.mode == "add":
+            id = self.create_equipment(equipment)
+        elif self.mode == "edit":
+            id = self.update_equipment(equipment)
+        print(f"INFO: Equipment save successful")
+        self.controller.show_frame(ListAllView)
+
+    def on_cancel(self):
+        self.controller.show_frame(ListAllView)
 
 
 class AbstractAddView(AbstractAddEditView):
-    pass
+    def __init__(self, connection, parent, controller):
+        super().__init__(connection, parent, controller)
+        self.mode = "add"
 
 class AbstractEditView(AbstractAddEditView):
-    pass
-
-
-class AddItemView(AbstractAddView):
-    pass
-
-class AddBorrowerView(AbstractAddView):
-    pass
-
-class EditItemView(AbstractEditView):
-    pass
-
-class EditBorrowerView(AbstractEditView):
-    pass
+    def __init__(self, connection, parent, controller):
+            super().__init__(connection, parent, controller)
+            self.mode = "add"

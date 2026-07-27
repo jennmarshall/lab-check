@@ -1,10 +1,17 @@
-
-
 class Borrower:
     def __init__(self, name, number, email):
+        self._id = None
         self._name = name
         self._number = number
         self._email = email
+
+    @property
+    def id(self):
+        return self._id
+
+    @id.setter
+    def id(self, value):
+        self._id = value
 
     @property
     def name(self):

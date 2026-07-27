@@ -1,13 +1,20 @@
-
-
 class Equipment:
     def __init__(self, name, category, dateBorrowed, laboratory, status, borrower):
+        self._id = None
         self._name = name
         self._category = category
         self._dateBorrowed = dateBorrowed
         self._laboratory = laboratory
         self._status = status
         self._borrower = borrower
+
+    @property
+    def id(self):
+        return self._id
+
+    @id.setter
+    def id(self, value):
+        self._id = value
 
     @property
     def name(self):
