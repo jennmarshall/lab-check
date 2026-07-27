@@ -1,5 +1,6 @@
 class Equipment:
-    def __init__(self, name, category, dateBorrowed, laboratory, status, borrower):
+    def __init__(self, name, category, dateBorrowed, laboratory, status,
+                 borrower):
         self._id = None
         self._name = name
         self._category = category

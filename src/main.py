@@ -2,10 +2,12 @@ import database as db
 from views import LabCheckView
 
 
-# The main file for the LabCheck application, that contains the main function that
-# runs the application.
+# The main file for the LabCheck application, that contains the main function
+# that runs the application.
 
-# The main function that runs the application. It creates a connection to the database, initializes the main application window, and starts the main event loop. After the main event loop ends, it will close the database connection. 
+# The main function that runs the application. It creates a connection to the
+# database, initializes the main application window, and starts the main event
+# loop. After the main event loop ends, it will close the database connection.
 def main():
     global connection
     connection = db.connect('database.db')
@@ -31,4 +33,5 @@ def main():
     db.disconnect(connection)
 
 
-main()
+if __name__ == "__main__":
+    main()
