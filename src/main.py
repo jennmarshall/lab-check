@@ -1,7 +1,5 @@
-import tkinter as tk
-
 import database as db
-from views.main_view import LabCheckView
+from views import LabCheckView
 
 
 # The main file for the LabCheck application, that contains the main function that
